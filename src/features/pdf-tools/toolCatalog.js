@@ -17,6 +17,7 @@ export const toolRouteIds = {
   "PDF to Excel": "pdf-to-excel",
   "PDF to PowerPoint": "pdf-to-powerpoint",
   "PDF to JPG or images": "pdf-to-jpg-or-images",
+  "Extract images from PDF": "extract-images",
   "Word to PDF": "word-to-pdf",
   "Excel to PDF": "excel-to-pdf",
   "Images to PDF": "images-to-pdf",
@@ -49,7 +50,7 @@ export const toolGroups = [
     title: "Convert files",
     description: "Convert PDFs to and from everyday file formats.",
     icon: "convert",
-    tools: ["PDF to Word", "PDF to Excel", "PDF to PowerPoint", "PDF to JPG or images", "Word to PDF", "Excel to PDF", "Images to PDF"],
+    tools: ["PDF to Word", "PDF to Excel", "PDF to PowerPoint", "PDF to JPG or images", "Extract images from PDF", "Word to PDF", "Excel to PDF", "Images to PDF"],
   },
   {
     title: "Compress & secure",

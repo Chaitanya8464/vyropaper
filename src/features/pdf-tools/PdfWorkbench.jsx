@@ -3,6 +3,7 @@ import "./workbench.css";
 import ToolControls from "./ToolControls.jsx";
 
 const PdfDocumentEditor = lazy(() => import("../pdf-editor/PdfDocumentEditor.jsx"));
+const ExtractImages = lazy(() => import("./ExtractImages.jsx"));
 
 const LIMITATIONS = {
   "protect-with-a-password": "Password encryption is not available in this browser-only build. No file was changed.",
@@ -106,6 +107,9 @@ export default function PdfWorkbench({ toolId, toolLabel }) {
   }
 
   const label = toolLabel || "PDF tool";
+  if (toolId === "extract-images") {
+    return <Suspense fallback={<div className="pdfw-message" role="status">Opening image extractor…</div>}><ExtractImages /></Suspense>;
+  }
   return (
     <section
       className={`pdfw${editorOpen ? " pdfw-editor-open" : ""}`}
@@ -147,7 +151,7 @@ export default function PdfWorkbench({ toolId, toolLabel }) {
       </div>
 
       {toolId === "edit-pdf" && files[0] && (
-        <div>
+        <div className={editorOpen ? "pdfw-editor-container" : undefined}>
           <Suspense fallback={<div className="pdfw-message" role="status">Opening PDF editor…</div>}>
             <PdfDocumentEditor file={files[0]} onReplaceFile={() => inputRef.current?.click()} />
           </Suspense>
