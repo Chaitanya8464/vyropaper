@@ -20,18 +20,106 @@ const TOOLS = [
 const idFor = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-function fontFamilyFor(style) {
-  const description = `${style?.fontFamily || ""} ${style?.fontName || ""}`;
-  const family = /courier|mono/i.test(description) ? "Courier"
-    : /times|serif/i.test(description) && !/sans[- ]serif/i.test(description) ? "Times Roman"
-      : "Helvetica";
-  return /bold|black|heavy/i.test(description) ? `${family} Bold` : family;
+function fontFamilyFor(style, fontInfo) {
+  const description = `${style?.fontFamily || ""} ${fontInfo?.name || ""} ${fontInfo?.fallbackName || ""}`;
+  if (/courier|mono/i.test(description)) return "Courier";
+  if (/times|serif/i.test(description) && !/sans[- ]serif/i.test(description)) return "Times Roman";
+  return "Helvetica";
+}
+
+function fontWeightFor(fontInfo) {
+  const weight = Number(fontInfo?.cssFontInfo?.fontWeight || fontInfo?.fontWeight);
+  const description = `${fontInfo?.name || ""} ${fontInfo?.fallbackName || ""}`;
+  return fontInfo?.bold || fontInfo?.black || weight >= 600 || /bold|black|heavy|demi|semibold/i.test(description)
+    ? "bold"
+    : "normal";
+}
+
+function fontStyleFor(fontInfo) {
+  const italicAngle = Number(fontInfo?.cssFontInfo?.italicAngle || fontInfo?.italicAngle || 0);
+  const description = `${fontInfo?.name || ""} ${fontInfo?.fallbackName || ""}`;
+  return fontInfo?.italic || italicAngle !== 0 || /italic|oblique/i.test(description) ? "italic" : "normal";
 }
 
 function browserFontFor(family) {
   if (family.startsWith("Times")) return '"Times New Roman", serif';
   if (family.startsWith("Courier")) return '"Courier New", monospace';
   return "Arial, sans-serif";
+}
+
+function colorFromOperator(operation, args, currentColor) {
+  if (operation === pdfjs.OPS.setFillRGBColor) {
+    const value = args[0];
+    if (typeof value === "string" && /^#[\da-f]{3,8}$/i.test(value)) return value;
+    if (Array.isArray(value) && value.length >= 3) {
+      return `#${value.slice(0, 3).map((channel) => Math.round(clamp(Number(channel) * 255, 0, 255)).toString(16).padStart(2, "0")).join("")}`;
+    }
+  }
+  if (operation === pdfjs.OPS.setFillGray) {
+    const gray = Math.round(clamp(Number(args[0]) * 255, 0, 255)).toString(16).padStart(2, "0");
+    return `#${gray}${gray}${gray}`;
+  }
+  if (operation === pdfjs.OPS.setFillCMYKColor && args.length >= 4) {
+    const [cyan, magenta, yellow, black] = args.map((channel) => clamp(Number(channel), 0, 1));
+    const channels = [cyan, magenta, yellow].map((channel) => Math.round(255 * (1 - channel) * (1 - black)));
+    return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+  }
+  if (operation === pdfjs.OPS.setFillColor && typeof args[0] === "string" && /^#[\da-f]{3,8}$/i.test(args[0])) {
+    return args[0];
+  }
+  return currentColor;
+}
+
+function textRunsForPage(operatorList) {
+  const textOperations = new Set([
+    pdfjs.OPS.showText,
+    pdfjs.OPS.showSpacedText,
+    pdfjs.OPS.nextLineShowText,
+    pdfjs.OPS.nextLineSetSpacingShowText,
+  ]);
+  const runs = [];
+  const fontColors = new Map();
+  let color = "#000000";
+  let fontName = "";
+  for (let index = 0; index < operatorList.fnArray.length; index += 1) {
+    const operation = operatorList.fnArray[index];
+    const args = operatorList.argsArray[index] || [];
+    if (operation === pdfjs.OPS.setFont) fontName = args[0] || fontName;
+    color = colorFromOperator(operation, args, color);
+    if (!textOperations.has(operation)) continue;
+    const glyphs = [];
+    const collectGlyphs = (value) => {
+      if (Array.isArray(value)) value.forEach(collectGlyphs);
+      else if (value && typeof value === "object") {
+        if (typeof value.unicode === "string") glyphs.push(value.unicode);
+        else if (Array.isArray(value.items)) collectGlyphs(value.items);
+      }
+    };
+    collectGlyphs(args);
+    const text = glyphs.join("");
+    if (fontName) fontColors.set(fontName, color);
+    if (text) runs.push({ text, color, fontName });
+  }
+  return { runs, fontColors };
+}
+
+function colorsForTextItems(items, runs, fontColors) {
+  const offsets = [];
+  let stream = "";
+  for (const run of runs) {
+    offsets.push({ start: stream.length, end: stream.length + run.text.length, color: run.color });
+    stream += run.text;
+  }
+  let cursor = 0;
+  return new Map(items.map((item) => {
+    const start = stream.indexOf(item.str, cursor);
+    if (start < 0) return [item.id, fontColors.get(item.fontName) || "#000000"];
+    cursor = start + item.str.length;
+    const color = offsets.find((range) => start >= range.start && start < range.end)?.color
+      || fontColors.get(item.fontName)
+      || "#000000";
+    return [item.id, color];
+  }));
 }
 
 function colorToRgb(hex) {
@@ -76,6 +164,8 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
   const [shapeType, setShapeType] = useState("rectangle");
   const [fontSize, setFontSize] = useState(18);
   const [fontFamily, setFontFamily] = useState("Helvetica");
+  const [fontWeight, setFontWeight] = useState("normal");
+  const [fontStyle, setFontStyle] = useState("normal");
   const [textColor, setTextColor] = useState("#263328");
   const [highlightColor, setHighlightColor] = useState("#f4db74");
   const [imageData, setImageData] = useState(null);
@@ -187,12 +277,17 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
           const page = await loaded.getPage(pageNumber);
           const viewport = page.getViewport({ scale: 1 });
           const content = await page.getTextContent();
-          const textItems = content.items.flatMap((item, itemIndex) => {
+          const rawTextItems = content.items.filter((item) => "str" in item && item.str.trim());
+          const operatorList = await page.getOperatorList();
+          const { runs, fontColors } = textRunsForPage(operatorList);
+          const textColors = colorsForTextItems(rawTextItems, runs, fontColors);
+          const textItems = rawTextItems.flatMap((item, itemIndex) => {
             if (!("str" in item) || !item.str.trim()) return [];
             const transform = pdfjs.Util.transform(viewport.transform, item.transform);
             const angle = Math.atan2(transform[1], transform[0]);
             if (Math.abs(angle) > 0.02) return [];
             const textStyle = content.styles[item.fontName];
+            const fontInfo = page.commonObjs.has(item.fontName) ? page.commonObjs.get(item.fontName) : null;
             const height = Math.max(item.height, Math.hypot(transform[2], transform[3]));
             const ascent = textStyle?.ascent > 0 ? textStyle.ascent : 1;
             return [{
@@ -203,7 +298,10 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
               width: Math.max(item.width, 8),
               height,
               baselineRatio: ascent,
-              fontFamily: fontFamilyFor(textStyle),
+              fontFamily: fontFamilyFor(textStyle, fontInfo),
+              fontWeight: fontWeightFor(fontInfo),
+              fontStyle: fontStyleFor(fontInfo),
+              color: textColors.get(item.id) || "#000000",
               fontSize: height,
             }];
           });
@@ -313,12 +411,14 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
       color: textColor,
       fontSize: Number(fontSize),
       fontFamily,
+      fontWeight,
+      fontStyle,
       text: "",
       shape: shapeType,
     };
     let next;
     if (tool === "text") next = { ...defaults, kind: "text", text: "New text" };
-    else if (tool === "signature") next = { ...defaults, kind: "signature", text: "Your name", fontFamily: "Times Roman", fontSize: Math.max(24, Number(fontSize)), color: "#273c2b" };
+    else if (tool === "signature") next = { ...defaults, kind: "signature", text: "Your name", fontFamily: "Times Roman", fontWeight: "normal", fontStyle: "italic", fontSize: Math.max(24, Number(fontSize)), color: "#273c2b" };
     else if (tool === "highlight") next = { ...defaults, kind: "highlight", width: 150, height: 24, color: highlightColor };
     else if (tool === "whiteout") next = { ...defaults, kind: "whiteout", width: 150, height: 32 };
     else if (tool === "shape") next = { ...defaults, kind: "shape", width: 130, height: 70, color: textColor };
@@ -370,9 +470,11 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
       y: item.y,
       width: item.width,
       height: item.height,
-      color: "#20231f",
+      color: item.color,
       fontSize: item.fontSize,
       fontFamily: item.fontFamily,
+      fontWeight: item.fontWeight,
+      fontStyle: item.fontStyle,
       text: item.text,
     };
     commit([...currentOverlayRef.current, next]);
@@ -453,13 +555,26 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
     try {
       const pdf = await PDFDocument.load(await file.arrayBuffer());
       const fontCache = new Map();
-      const fontFor = async (family) => {
-        const name = family === "Helvetica Bold" ? StandardFonts.HelveticaBold
-          : family === "Times Roman" ? StandardFonts.TimesRoman
-            : family === "Times Roman Bold" ? StandardFonts.TimesRomanBold
-              : family === "Courier" ? StandardFonts.Courier
-                : family === "Courier Bold" ? StandardFonts.CourierBold
-                  : StandardFonts.Helvetica;
+      const fontFor = async (family, weight = "normal", style = "normal") => {
+        const base = family === "Times Roman" ? "TimesRoman"
+          : family === "Courier" ? "Courier"
+            : "Helvetica";
+        const face = `${weight === "bold" ? "bold" : "regular"}-${style === "italic" ? "italic" : "upright"}`;
+        const names = {
+          "Helvetica-regular-upright": StandardFonts.Helvetica,
+          "Helvetica-regular-italic": StandardFonts.HelveticaOblique,
+          "Helvetica-bold-upright": StandardFonts.HelveticaBold,
+          "Helvetica-bold-italic": StandardFonts.HelveticaBoldOblique,
+          "TimesRoman-regular-upright": StandardFonts.TimesRoman,
+          "TimesRoman-regular-italic": StandardFonts.TimesRomanItalic,
+          "TimesRoman-bold-upright": StandardFonts.TimesRomanBold,
+          "TimesRoman-bold-italic": StandardFonts.TimesRomanBoldItalic,
+          "Courier-regular-upright": StandardFonts.Courier,
+          "Courier-regular-italic": StandardFonts.CourierOblique,
+          "Courier-bold-upright": StandardFonts.CourierBold,
+          "Courier-bold-italic": StandardFonts.CourierBoldOblique,
+        };
+        const name = names[`${base}-${face}`];
         if (!fontCache.has(name)) fontCache.set(name, await pdf.embedFont(name));
         return fontCache.get(name);
       };
@@ -473,10 +588,10 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
         if (overlay.kind === "edit-text") {
           page.drawRectangle({ x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, color: rgb(1, 1, 1), borderWidth: 0 });
           if (overlay.text) {
-            const font = await fontFor(overlay.fontFamily);
-              const baseline = overlay.y + Number(overlay.fontSize) * (overlay.baselineRatio || 0.8);
-              const [, baselineY] = pageInfo.viewport.convertToPdfPoint(overlay.x, baseline);
-              const [textX] = pageInfo.viewport.convertToPdfPoint(overlay.x, baseline);
+            const font = await fontFor(overlay.fontFamily, overlay.fontWeight, overlay.fontStyle);
+            const baseline = overlay.y + Number(overlay.fontSize) * (overlay.baselineRatio || 0.8);
+            const [, baselineY] = pageInfo.viewport.convertToPdfPoint(overlay.x, baseline);
+            const [textX] = pageInfo.viewport.convertToPdfPoint(overlay.x, baseline);
             page.drawText(overlay.text, {
               x: textX,
               y: baselineY,
@@ -488,7 +603,7 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
             });
           }
         } else if (overlay.kind === "text" || overlay.kind === "signature") {
-          const font = await fontFor(overlay.fontFamily);
+          const font = await fontFor(overlay.fontFamily, overlay.fontWeight, overlay.fontStyle);
           const [, baselineY] = pageInfo.viewport.convertToPdfPoint(overlay.x, overlay.y + Number(overlay.fontSize));
           const [textX] = pageInfo.viewport.convertToPdfPoint(overlay.x, overlay.y + Number(overlay.fontSize));
           page.drawText(overlay.text || "", {
@@ -616,7 +731,13 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
                   <input type="number" min="6" max="96" value={fontSize} onChange={(event) => setFontSize(clamp(Number(event.target.value), 6, 96))} />
                 </label>
                 <label className="pde-field">Default font
-                  <select value={fontFamily} onChange={(event) => setFontFamily(event.target.value)}><option>Helvetica</option><option>Helvetica Bold</option><option>Times Roman</option><option>Times Roman Bold</option><option>Courier</option><option>Courier Bold</option></select>
+                  <select value={fontFamily} onChange={(event) => setFontFamily(event.target.value)}><option>Helvetica</option><option>Times Roman</option><option>Courier</option></select>
+                </label>
+                <label className="pde-field">Default weight
+                  <select value={fontWeight} onChange={(event) => setFontWeight(event.target.value)}><option value="normal">Regular</option><option value="bold">Bold</option></select>
+                </label>
+                <label className="pde-field">Default style
+                  <select value={fontStyle} onChange={(event) => setFontStyle(event.target.value)}><option value="normal">Upright</option><option value="italic">Italic</option></select>
                 </label>
                 <label className="pde-field">Text color <input type="color" value={textColor} onChange={(event) => setTextColor(event.target.value)} /></label>
               </> : null}
@@ -635,7 +756,17 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
                   </label>}
                   {selectedOverlay.kind !== "comment" && <label className="pde-field">Font family
                     <select value={selectedOverlay.fontFamily} onChange={(event) => updateOverlay(selectedId, { fontFamily: event.target.value })} aria-label="Selected text font family">
-                      <option>Helvetica</option><option>Helvetica Bold</option><option>Times Roman</option><option>Times Roman Bold</option><option>Courier</option><option>Courier Bold</option>
+                      <option>Helvetica</option><option>Times Roman</option><option>Courier</option>
+                    </select>
+                  </label>}
+                  {selectedOverlay.kind !== "comment" && <label className="pde-field">Font weight
+                    <select value={selectedOverlay.fontWeight || "normal"} onChange={(event) => updateOverlay(selectedId, { fontWeight: event.target.value })} aria-label="Selected text font weight">
+                      <option value="normal">Regular</option><option value="bold">Bold</option>
+                    </select>
+                  </label>}
+                  {selectedOverlay.kind !== "comment" && <label className="pde-field">Font style
+                    <select value={selectedOverlay.fontStyle || "normal"} onChange={(event) => updateOverlay(selectedId, { fontStyle: event.target.value })} aria-label="Selected text font style">
+                      <option value="normal">Upright</option><option value="italic">Italic</option>
                     </select>
                   </label>}
                   {selectedOverlay.kind !== "comment" && <label className="pde-field">Font size
@@ -685,6 +816,8 @@ function PdfDocumentEditor({ file, onReplaceFile }) {
                       color: overlay.color,
                       fontSize: (overlay.fontSize || 14) * scale,
                       fontFamily: browserFontFor(overlay.fontFamily),
+                      fontWeight: overlay.fontWeight || "normal",
+                      fontStyle: overlay.fontStyle || "normal",
                     };
                     const overlayClass = `pde-overlay pde-${overlay.kind}${selectedId === overlay.id ? " is-selected" : ""}`;
                     return <div key={overlay.id} className={overlayClass} style={style} onPointerDown={(event) => onOverlayPointerDown(event, overlay, page)} onPointerMove={onOverlayPointerMove} onPointerUp={onOverlayPointerUp} role={overlay.kind === "edit-text" ? undefined : "button"} tabIndex={overlay.kind === "edit-text" ? -1 : 0} aria-label={`${overlay.kind} overlay${selectedId === overlay.id ? ", selected" : ""}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedId(overlay.id); setActivePage(page.pageNumber); } }}>
