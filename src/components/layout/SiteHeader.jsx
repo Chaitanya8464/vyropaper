@@ -2,22 +2,27 @@ import React from "react";
 import Arrow from "../ui/Arrow.jsx";
 import Brand from "../ui/Brand.jsx";
 import { useTheme } from "../../app/ThemeContext.jsx";
+import { AnimatedTopDock } from "../../shaders/animated-top-dock/AnimatedTopDock.tsx";
 
 export default function SiteHeader({ activePage = "home" }) {
   const { theme, setTheme } = useTheme();
-  const homePath = activePage === "home";
   const editorHref = activePage === "tool" ? "/" : "/tools/edit-pdf";
 
   return (
     <header className="site-header">
       <div className="header-inner">
         <Brand />
-        <nav className="main-nav" aria-label="Main navigation">
-          <a href={homePath ? "#tools" : "/#tools"}>Tools</a>
-          <a href={homePath ? "#how-it-works" : "/#how-it-works"}>How it works</a>
-          <a href="/privacy" aria-current={activePage === "privacy" ? "page" : undefined}>Privacy</a>
-          <a href="/terms" aria-current={activePage === "terms" ? "page" : undefined}>Terms</a>
-        </nav>
+        <div className="top-dock-slot">
+          <AnimatedTopDock
+            variant="sable"
+            proximity={122}
+            spring={0.19}
+            damping={0.70}
+            widthGrowth={17}
+            heightGrowth={16}
+            drop={3.5}
+          />
+        </div>
         <div className="header-actions">
           <button
             className="theme-toggle"
