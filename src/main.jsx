@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "./app/ThemeContext.jsx";
 import App from "./app/App.jsx";
+import "./shaders/threeui.css";
 import "./styles/global.css";
 
 createRoot(document.getElementById("root")).render(

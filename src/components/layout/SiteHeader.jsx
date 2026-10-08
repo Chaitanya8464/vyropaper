@@ -1,43 +1,73 @@
 import React from "react";
-import Arrow from "../ui/Arrow.jsx";
 import Brand from "../ui/Brand.jsx";
 import { useTheme } from "../../app/ThemeContext.jsx";
+import { AnimatedTopDock } from "../../shaders/animated-top-dock/AnimatedTopDock.tsx";
 
 export default function SiteHeader({ activePage = "home" }) {
   const { theme, setTheme } = useTheme();
-  const homePath = activePage === "home";
-  const editorHref = activePage === "tool" ? "/" : "/tools/edit-pdf";
+  const isHome = activePage === "home";
+  const menuItems = [
+    {
+      id: "tools",
+      label: "Tools",
+      href: isHome ? "#tools" : "/#tools",
+      icon: <><rect x="2.25" y="2.25" width="4.5" height="4.5" rx=".8" /><rect x="9.25" y="2.25" width="4.5" height="4.5" rx=".8" /><rect x="2.25" y="9.25" width="4.5" height="4.5" rx=".8" /><rect x="9.25" y="9.25" width="4.5" height="4.5" rx=".8" /></>,
+    },
+    {
+      id: "how-it-works",
+      label: "How it works",
+      href: isHome ? "#how-it-works" : "/#how-it-works",
+      icon: <><circle cx="3" cy="8" r="1.5" /><circle cx="12.5" cy="3.5" r="1.5" /><circle cx="12.5" cy="12.5" r="1.5" /><path d="M4.5 7.3 11 4.2M4.5 8.7l6.5 3.1" /></>,
+    },
+    {
+      id: "privacy",
+      label: "Privacy",
+      href: "/privacy",
+      current: activePage === "privacy",
+      icon: <><path d="M8 1.8 13.5 4v4.2c0 3.1-2.3 5.2-5.5 6.8-3.2-1.6-5.5-3.7-5.5-6.8V4L8 1.8Z" /><path d="m5.5 8 1.6 1.6L10.8 6" /></>,
+    },
+    {
+      id: "terms",
+      label: "Terms",
+      href: "/terms",
+      current: activePage === "terms",
+      icon: <><path d="M4 2.25h5.4L12 4.85v8.9H4z" /><path d="M9.25 2.25V5h2.7M6 8h4M6 10.5h4" /></>,
+    },
+    {
+      id: "theme",
+      label: theme === "dark" ? "Light" : "Dark",
+      ariaLabel: `Switch to ${theme === "dark" ? "light" : "dark"} mode`,
+      pressed: theme === "dark",
+      onClick: () => setTheme(theme === "dark" ? "light" : "dark"),
+      icon: theme === "dark"
+        ? <path d="M12.7 9.7A5.5 5.5 0 0 1 6.3 3.3 5.8 5.8 0 1 0 12.7 9.7Z" />
+        : <><circle cx="8" cy="8" r="3" /><path d="M8 1.5v1.4M8 13.1v1.4M14.5 8h-1.4M2.9 8H1.5m11.1-4.6-1 1M4.4 11.6l-1 1m9.2 0-1-1m-7.2-7.2-1-1" /></>,
+    },
+    {
+      id: "editor",
+      label: "Edit PDF",
+      href: "/tools/edit-pdf",
+      current: activePage === "tool",
+      icon: <><path d="M3 2.5h6l4 4v7H3z" /><path d="M9 2.5v4h4M5.5 9h4M5.5 11h3" /></>,
+    },
+  ];
 
   return (
     <header className="site-header">
       <div className="header-inner">
         <Brand />
-        <nav className="main-nav" aria-label="Main navigation">
-          <a href={homePath ? "#tools" : "/#tools"}>Tools</a>
-          <a href={homePath ? "#how-it-works" : "/#how-it-works"}>How it works</a>
-          <a href="/privacy" aria-current={activePage === "privacy" ? "page" : undefined}>Privacy</a>
-          <a href="/terms" aria-current={activePage === "terms" ? "page" : undefined}>Terms</a>
-        </nav>
-        <div className="header-actions">
-          <button
-            className="theme-toggle"
-            type="button"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            aria-pressed={theme === "dark"}
-            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          >
-            <svg className="theme-toggle-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              {theme === "dark"
-                ? <path d="M16.7 12.1A7.2 7.2 0 0 1 7.9 3.3 7.3 7.3 0 1 0 16.7 12Z" />
-                : <><circle cx="10" cy="10" r="3.5" /><path d="M10 1.5v2M10 16.5v2M18.5 10h-2M3.5 10h-2m14.5-6-1.4 1.4M5.4 14.6 4 16m12 0-1.4-1.4M5.4 5.4 4 4" /></>}
-            </svg>
-            <span>{theme === "dark" ? "Light" : "Dark"}</span>
-          </button>
-          <a className="header-link" href={editorHref}>
-            {activePage === "home" ? <>Edit PDF <Arrow /></> : activePage === "tool" ? "Back home" : "Open editor"}
-          </a>
-        </div>
+        <AnimatedTopDock
+          className="paperwork-dock"
+          variant="sable"
+          proximity={122}
+          spring={0.19}
+          damping={0.70}
+          widthGrowth={17}
+          heightGrowth={16}
+          drop={3.5}
+          homeCurrent={isHome}
+          menuItems={menuItems}
+        />
       </div>
     </header>
   );
