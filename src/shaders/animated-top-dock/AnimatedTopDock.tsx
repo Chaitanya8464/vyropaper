@@ -4,6 +4,16 @@ import { createTopDockController, type TopDockOptions } from "./topDockControlle
 export const ANIMATED_TOP_DOCK_VARIANTS = ["sable", "modern", "retro", "glass"] as const;
 export type AnimatedTopDockVariant = (typeof ANIMATED_TOP_DOCK_VARIANTS)[number];
 
+type DockItem = { id: string; label: string; icon: ReactNode };
+
+export type AnimatedTopDockMenuItem = DockItem & {
+  href?: string;
+  current?: boolean;
+  pressed?: boolean;
+  onClick?: () => void;
+  ariaLabel?: string;
+};
+
 export type AnimatedTopDockProps = {
   variant?: AnimatedTopDockVariant;
   proximity?: number;
@@ -26,6 +36,8 @@ export type AnimatedTopDockProps = {
   rim?: number;
   drift?: number;
   className?: string;
+  menuItems?: readonly AnimatedTopDockMenuItem[];
+  homeCurrent?: boolean;
 };
 
 export const ANIMATED_TOP_DOCK_DEFAULTS = {
@@ -48,8 +60,6 @@ export const ANIMATED_TOP_DOCK_DEFAULTS = {
   rim: 0.5,
   drift: 1,
 } as const;
-
-type DockItem = { id: string; label: string; icon: ReactNode };
 
 const ITEMS: readonly DockItem[] = [
   { id: "system", label: "SYSTEM", icon: <><rect x="2.25" y="2.25" width="4.5" height="4.5" rx=".8" /><rect x="9.25" y="2.25" width="4.5" height="4.5" rx=".8" /><rect x="2.25" y="9.25" width="4.5" height="4.5" rx=".8" /><rect x="9.25" y="9.25" width="4.5" height="4.5" rx=".8" /></> },
@@ -182,7 +192,7 @@ function useShaderField(active: boolean, load: () => Promise<(canvas: HTMLCanvas
   return { hostRef, canvasRef };
 }
 
-export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockProps) {
+export function AnimatedTopDock({ className = "", menuItems, homeCurrent = false, ...props }: AnimatedTopDockProps) {
   const optionsRef = useRef({ ...ANIMATED_TOP_DOCK_DEFAULTS, ...props });
   optionsRef.current = { ...ANIMATED_TOP_DOCK_DEFAULTS, ...props };
   const variant = optionsRef.current.variant;
@@ -219,19 +229,43 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
     }));
   });
 
-  const dockItems = (itemClass: string, iconClass: string, viewBox: string) => items.map((item) => (
-    <button
-      key={item.id}
-      className={itemClass}
-      data-dock-item
-      type="button"
-      aria-pressed={active === item.id}
-      onClick={() => setActive(item.id)}
-    >
-      <span className={iconClass} aria-hidden="true"><svg viewBox={viewBox}>{item.icon}</svg></span>
-      <span>{item.label}</span>
-    </button>
-  ));
+  const dockItems = (itemClass: string, iconClass: string, viewBox: string) => (menuItems ?? items).map((item) => {
+    const contents = (
+      <>
+        <span className={iconClass} aria-hidden="true"><svg viewBox={viewBox}>{item.icon}</svg></span>
+        {menuItems ? <span className="animated-top-dock__link-label">{item.label}</span> : item.label}
+      </>
+    );
+
+    if (item.href) {
+      return (
+        <a
+          key={item.id}
+          className={itemClass}
+          data-dock-item
+          href={item.href}
+          aria-label={item.ariaLabel}
+          aria-current={item.current ? "page" : undefined}
+        >
+          {contents}
+        </a>
+      );
+    }
+
+    return (
+      <button
+        key={item.id}
+        className={itemClass}
+        data-dock-item
+        type="button"
+        aria-label={item.ariaLabel}
+        aria-pressed={item.pressed ?? (menuItems ? undefined : active === item.id)}
+        onClick={item.onClick ?? (() => setActive(item.id))}
+      >
+        {contents}
+      </button>
+    );
+  });
 
   if (variant === "modern") {
     return (
@@ -323,17 +357,25 @@ export function AnimatedTopDock({ className = "", ...props }: AnimatedTopDockPro
   return (
     <div className={`animated-top-dock-component${className ? ` ${className}` : ""}`}>
       <nav ref={rootRef} className="animated-top-dock__nav" aria-label="Animated top dock" data-dock-state="idle" data-dock-max="0.00">
-        <button className="animated-top-dock__item animated-top-dock__logo" data-dock-item type="button" aria-label="Home" onClick={() => setActive("system")}>
-          {BRAND_MARK}
-        </button>
-        {items.map((item) => (
-          <button key={item.id} className="animated-top-dock__item animated-top-dock__link" data-dock-item type="button" aria-pressed={active === item.id} onClick={() => setActive(item.id)}>
-            <span className="animated-top-dock__icon" aria-hidden="true"><svg viewBox="0 0 16 16">{item.icon}</svg></span>
-            <span>{item.label}</span>
+        {menuItems ? (
+          <a
+            className="animated-top-dock__item animated-top-dock__logo"
+            data-dock-item
+            href="/"
+            aria-label="Home"
+            aria-current={homeCurrent ? "page" : undefined}
+          >
+            {BRAND_MARK}
+            <span className="animated-top-dock__home-label">Home</span>
+          </a>
+        ) : (
+          <button className="animated-top-dock__item animated-top-dock__logo" data-dock-item type="button" aria-label="Home" onClick={() => setActive("system")}>
+            {BRAND_MARK}
           </button>
-        ))}
+        )}
+        {dockItems("animated-top-dock__item animated-top-dock__link", "animated-top-dock__icon", "0 0 16 16")}
       </nav>
-      <p className="animated-top-dock-component__caption">MOVE ACROSS THE DOCK · FOCUS WITH TAB</p>
+      {!menuItems && <p className="animated-top-dock-component__caption">MOVE ACROSS THE DOCK · FOCUS WITH TAB</p>}
     </div>
   );
 }
