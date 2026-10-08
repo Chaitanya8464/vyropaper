@@ -5,50 +5,36 @@ import Arrow from "../components/ui/Arrow.jsx";
 import ToolIcon from "../components/ui/ToolIcon.jsx";
 import { toolGroups, toolRouteIds } from "../features/pdf-tools/toolCatalog.js";
 
-function ProductPreview() {
+const featuredTools = [
+  { name: "Edit PDF", group: "edit", description: "Add text, notes, and signatures." },
+  { name: "Merge PDFs", group: "pages", description: "Bring documents together in order." },
+  { name: "PDF to Word", group: "convert", description: "Turn a PDF into an editable document." },
+  { name: "Sign a PDF", group: "edit", description: "Add your signature to any page." },
+  { name: "Compress a PDF", group: "secure", description: "Make a large file easier to share." },
+  { name: "Split a PDF", group: "pages", description: "Separate the pages you need." },
+  { name: "Images to PDF", group: "convert", description: "Combine images into one PDF." },
+  { name: "Recognize text (OCR)", group: "secure", description: "Make scanned pages searchable." },
+];
+
+function ToolSlides({ duplicate = false }) {
   return (
-    <div className="preview-card" role="img" aria-label="Illustration of the Paperwork PDF editing workspace">
-      <div className="preview-window">
-        <div className="preview-sidebar">
-          <div className="sidebar-brand"><span className="mini-mark" /><span>paperwork</span></div>
-          <div className="sidebar-label">PDF TOOLS</div>
-          <div className="sidebar-item sidebar-item-active"><span className="sidebar-square" /> Edit PDF</div>
-          <div className="sidebar-item"><span className="sidebar-square sidebar-square-outline" /> Organize</div>
-          <div className="sidebar-item"><span className="sidebar-square sidebar-square-outline" /> Convert</div>
-          <div className="sidebar-bottom">
-            <div className="avatar">↗</div>
-            <div><strong>Private by design</strong><span>Files stay on this device</span></div>
-          </div>
-        </div>
-        <div className="preview-main">
-          <div className="preview-topbar">
-            <span>EDIT PDF <span className="crumb-divider">/</span> proposal.pdf</span>
-            <span className="save-status"><i /> On this device</span>
-          </div>
-          <div className="document-stage">
-            <div className="document-toolbar">
-              <span className="toolbar-active">Select</span><span>T</span><span>Highlight</span>
-              <span className="toolbar-divider" /><span>−</span><span>100%</span><span>+</span>
-            </div>
-            <div className="paper-sheet">
-              <div className="paper-kicker">NORTH &amp; FIELD / 2025</div>
-              <div className="paper-heading">Project<br />proposal</div>
-              <div className="paper-rule" />
-              <div className="paper-section">OVERVIEW</div>
-              <div className="paper-line paper-line-long" />
-              <div className="paper-line" />
-              <div className="paper-line paper-line-mid" />
-              <div className="paper-section paper-section-lower">SCOPE OF WORK</div>
-              <div className="paper-line paper-line-long" />
-              <div className="paper-line" />
-              <div className="paper-line paper-line-mid" />
-              <div className="paper-note">Draft for review</div>
-            </div>
-          </div>
-          <div className="preview-footer"><span>Page 1 of 4</span><span>100%</span></div>
-        </div>
-      </div>
-      <div className="preview-caption"><span className="caption-dot" />A focused workspace for everyday PDF edits</div>
+    <div className="tool-slide-group" aria-hidden={duplicate || undefined}>
+      {featuredTools.map((tool) => (
+        <a
+          className="tool-slide-card"
+          href={`/tools/${toolRouteIds[tool.name]}`}
+          key={tool.name}
+          tabIndex={duplicate ? -1 : undefined}
+        >
+          <span className="tool-slide-icon"><ToolIcon name={tool.group} /></span>
+          <span className="tool-slide-copy">
+            <span className="tool-slide-label">PDF TOOL</span>
+            <strong>{tool.name}</strong>
+            <span>{tool.description}</span>
+          </span>
+          <Arrow />
+        </a>
+      ))}
     </div>
   );
 }
@@ -58,24 +44,24 @@ export default function HomePage() {
     <>
       <SiteHeader />
       <main>
-        <section className="hero section-wrap">
+        <section className="hero">
           <div className="hero-copy">
-            <div className="eyebrow"><span className="eyebrow-line" /> PDF work, made clearer</div>
-            <h1>Edit, convert, and organize PDF files <em>in one place.</em></h1>
+            <div className="eyebrow"><span className="eyebrow-line" /> Your documents, your device</div>
+            <h1>Make PDF work<br /><em>feel effortless.</em></h1>
             <p className="hero-description">
-              Add notes, rearrange pages, or convert a file without handing your
-              documents to a server. The tools run right here in your browser.
+              Edit, convert, and organize documents with simple tools that work
+              right in your browser. Your files stay yours.
             </p>
             <div className="hero-actions">
-              <a className="button button-dark" href="/tools/edit-pdf">Open the PDF editor <Arrow /></a>
+              <a className="button button-cream" href="/tools/edit-pdf">Get started <Arrow /></a>
               <a className="text-link" href="#tools">Explore all tools <span aria-hidden="true">↓</span></a>
             </div>
-            <p className="preview-notice"><span className="notice-dot" />No account. No upload. Your file stays on this device.</p>
           </div>
-          <div className="hero-visual">
-            <div className="visual-grid" aria-hidden="true" />
-            <ProductPreview />
-            <div className="side-note" aria-hidden="true"><span>01</span><span className="side-note-rule" /><span>THE WORKSPACE</span></div>
+          <div className="hero-tools" role="region" aria-label="Featured PDF tools">
+            <div className="tool-slide-track">
+              <ToolSlides />
+              <ToolSlides duplicate />
+            </div>
           </div>
         </section>
         <section className="trust-strip" aria-label="Product principles">
