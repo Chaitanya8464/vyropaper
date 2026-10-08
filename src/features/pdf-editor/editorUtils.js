@@ -1,4 +1,5 @@
 import { StandardFonts, rgb } from "pdf-lib";
+import * as pdfjs from "pdfjs-dist";
 
 export const idFor = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -18,21 +19,103 @@ export function colorToRgb(hex) {
   return rgb(r, g, b);
 }
 
-export function fontFamilyFor(style) {
-  const description = `${style?.fontFamily || ""} ${style?.fontName || ""}`.toLowerCase();
+export function fontFamilyFor(style, fontInfo) {
+  const description = `${style?.fontFamily || ""} ${style?.fontName || ""} ${fontInfo?.name || ""} ${fontInfo?.fallbackName || ""}`.toLowerCase();
   const isCourier = /courier|mono|typewriter/i.test(description);
   const isTimes = /times|serif|roman/i.test(description) && !/sans[- ]serif/i.test(description);
-  const isBold = /bold|black|heavy|w[7-9]00/i.test(description);
-  const isItalic = /italic|oblique/i.test(description);
 
-  let family = "Helvetica";
-  if (isCourier) family = "Courier";
-  else if (isTimes) family = "Times Roman";
+  if (isCourier) return "Courier";
+  if (isTimes) return "Times Roman";
+  return "Helvetica";
+}
 
-  if (isBold && isItalic) return `${family} Bold Italic`;
-  if (isBold) return `${family} Bold`;
-  if (isItalic) return `${family} Italic`;
-  return family;
+export function fontWeightFor(fontInfo) {
+  const weight = Number(fontInfo?.cssFontInfo?.fontWeight || fontInfo?.fontWeight);
+  const description = `${fontInfo?.name || ""} ${fontInfo?.fallbackName || ""}`;
+  return fontInfo?.bold || fontInfo?.black || weight >= 600 || /bold|black|heavy|demi|semibold/i.test(description)
+    ? "bold"
+    : "normal";
+}
+
+export function fontStyleFor(fontInfo) {
+  const italicAngle = Number(fontInfo?.cssFontInfo?.italicAngle || fontInfo?.italicAngle || 0);
+  const description = `${fontInfo?.name || ""} ${fontInfo?.fallbackName || ""}`;
+  return fontInfo?.italic || italicAngle !== 0 || /italic|oblique/i.test(description) ? "italic" : "normal";
+}
+
+export function colorFromOperator(operation, args, currentColor) {
+  if (operation === pdfjs.OPS.setFillRGBColor) {
+    const value = args[0];
+    if (typeof value === "string" && /^#[\da-f]{3,8}$/i.test(value)) return value;
+    if (Array.isArray(value) && value.length >= 3) {
+      return `#${value.slice(0, 3).map((channel) => Math.round(clamp(Number(channel) * 255, 0, 255)).toString(16).padStart(2, "0")).join("")}`;
+    }
+  }
+  if (operation === pdfjs.OPS.setFillGray) {
+    const gray = Math.round(clamp(Number(args[0]) * 255, 0, 255)).toString(16).padStart(2, "0");
+    return `#${gray}${gray}${gray}`;
+  }
+  if (operation === pdfjs.OPS.setFillCMYKColor && args.length >= 4) {
+    const [cyan, magenta, yellow, black] = args.map((channel) => clamp(Number(channel), 0, 1));
+    const channels = [cyan, magenta, yellow].map((channel) => Math.round(255 * (1 - channel) * (1 - black)));
+    return `#${channels.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+  }
+  if (operation === pdfjs.OPS.setFillColor && typeof args[0] === "string" && /^#[\da-f]{3,8}$/i.test(args[0])) {
+    return args[0];
+  }
+  return currentColor;
+}
+
+export function textRunsForPage(operatorList) {
+  const textOperations = new Set([
+    pdfjs.OPS.showText,
+    pdfjs.OPS.showSpacedText,
+    pdfjs.OPS.nextLineShowText,
+    pdfjs.OPS.nextLineSetSpacingShowText,
+  ]);
+  const runs = [];
+  const fontColors = new Map();
+  let color = "#000000";
+  let fontName = "";
+  for (let index = 0; index < operatorList.fnArray.length; index += 1) {
+    const operation = operatorList.fnArray[index];
+    const args = operatorList.argsArray[index] || [];
+    if (operation === pdfjs.OPS.setFont) fontName = args[0] || fontName;
+    color = colorFromOperator(operation, args, color);
+    if (!textOperations.has(operation)) continue;
+    const glyphs = [];
+    const collectGlyphs = (value) => {
+      if (Array.isArray(value)) value.forEach(collectGlyphs);
+      else if (value && typeof value === "object") {
+        if (typeof value.unicode === "string") glyphs.push(value.unicode);
+        else if (Array.isArray(value.items)) collectGlyphs(value.items);
+      }
+    };
+    collectGlyphs(args);
+    const text = glyphs.join("");
+    if (fontName) fontColors.set(fontName, color);
+    if (text) runs.push({ text, color, fontName });
+  }
+  return { runs, fontColors };
+}
+
+export function colorsForTextItems(items, runs, fontColors) {
+  const offsets = [];
+  let stream = "";
+  for (const run of runs) {
+    offsets.push({ start: stream.length, end: stream.length + run.text.length, color: run.color });
+    stream += run.text;
+  }
+  let cursor = 0;
+  return new Map(items.map((item) => {
+    const start = stream.indexOf(item.str, cursor);
+    if (start < 0) return [item.id, fontColors.get(item.fontName) || "#000000"];
+    cursor = start + item.str.length;
+    const color = offsets.find((range) => start >= range.start && start < range.end)?.color
+      || fontColors.get(item.fontName)
+      || "#000000";
+    return [item.id, color];
+  }));
 }
 
 export function browserFontFor(family) {
