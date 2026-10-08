@@ -1557,11 +1557,6 @@ a:hover .arrow-icon {
   background: var(--paper);
 }
 
-:root[data-theme="dark"] .site-header {
-  border-bottom-color: var(--line);
-  background: rgba(23, 26, 23, .96);
-}
-
 :root[data-theme="dark"] .brand-mark svg { stroke: #a3b69d; }
 :root[data-theme="dark"] .eyebrow,
 :root[data-theme="dark"] .hero-description,
@@ -1635,7 +1630,7 @@ a:hover .arrow-icon {
 .site-header {
   height: 82px;
   border-bottom: 0;
-  background: #111714;
+  background: transparent;
 }
 
 .site-header .brand,
