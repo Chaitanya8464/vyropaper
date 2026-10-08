@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import SiteFooter from "../components/layout/SiteFooter.jsx";
 import SiteHeader from "../components/layout/SiteHeader.jsx";
 import Arrow from "../components/ui/Arrow.jsx";
@@ -7,28 +7,26 @@ import { toolGroups, toolRouteIds } from "../features/pdf-tools/toolCatalog.js";
 
 const featuredTools = [
   { name: "Edit PDF", group: "edit", description: "Add text, notes, and signatures." },
-  { name: "Merge PDFs", group: "pages", description: "Bring documents together in order." },
+  { name: "Merge PDFs", group: "merge", description: "Bring documents together in order." },
   { name: "PDF to Word", group: "convert", description: "Turn a PDF into an editable document." },
-  { name: "Sign a PDF", group: "edit", description: "Add your signature to any page." },
+  { name: "Sign a PDF", group: "sign", description: "Add your signature to any page." },
   { name: "Compress a PDF", group: "secure", description: "Make a large file easier to share." },
-  { name: "Split a PDF", group: "pages", description: "Separate the pages you need." },
+  { name: "Split a PDF", group: "split", description: "Separate the pages you need." },
   { name: "Images to PDF", group: "convert", description: "Combine images into one PDF." },
   { name: "Recognize text (OCR)", group: "secure", description: "Make scanned pages searchable." },
 ];
 
-function ToolSlides({ duplicate = false }) {
+function ToolSlides() {
   return (
-    <div className="tool-slide-group" aria-hidden={duplicate || undefined}>
+    <div className="tool-slide-group">
       {featuredTools.map((tool) => (
         <a
           className="tool-slide-card"
           href={`/tools/${toolRouteIds[tool.name]}`}
           key={tool.name}
-          tabIndex={duplicate ? -1 : undefined}
         >
           <span className="tool-slide-icon"><ToolIcon name={tool.group} /></span>
           <span className="tool-slide-copy">
-            <span className="tool-slide-label">PDF TOOL</span>
             <strong>{tool.name}</strong>
             <span>{tool.description}</span>
           </span>
@@ -40,6 +38,46 @@ function ToolSlides({ duplicate = false }) {
 }
 
 export default function HomePage() {
+  const carouselRef = useRef(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const [isManuallyPaused, setIsManuallyPaused] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const isPaused = isHovered || hasFocus || isManuallyPaused || prefersReducedMotion;
+
+  const scrollTools = useCallback((direction, smooth = false) => {
+    const carousel = carouselRef.current;
+    const firstCard = carousel?.querySelector(".tool-slide-card");
+    if (!carousel || !firstCard) return;
+
+    const gap = Number.parseFloat(getComputedStyle(firstCard.parentElement).columnGap) || 0;
+    const step = firstCard.getBoundingClientRect().width + gap;
+    const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+    const target = direction > 0
+      ? (carousel.scrollLeft >= maxScroll - 1 ? 0 : Math.min(carousel.scrollLeft + step, maxScroll))
+      : (carousel.scrollLeft <= 1 ? maxScroll : Math.max(carousel.scrollLeft - step, 0));
+
+    carousel.scrollTo({
+      left: target,
+      behavior: !prefersReducedMotion && smooth ? "smooth" : "instant",
+    });
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => setPrefersReducedMotion(motionPreference.matches);
+    motionPreference.addEventListener("change", updateMotionPreference);
+    return () => motionPreference.removeEventListener("change", updateMotionPreference);
+  }, []);
+
+  useEffect(() => {
+    if (isPaused) return undefined;
+    const timer = window.setInterval(() => scrollTools(1, true), 6000);
+    return () => window.clearInterval(timer);
+  }, [isPaused, scrollTools]);
+
   return (
     <>
       <SiteHeader />
@@ -57,10 +95,37 @@ export default function HomePage() {
               <a className="text-link" href="#tools">Explore all tools <span aria-hidden="true">↓</span></a>
             </div>
           </div>
-          <div className="hero-tools" role="region" aria-label="Featured PDF tools">
-            <div className="tool-slide-track">
-              <ToolSlides />
-              <ToolSlides duplicate />
+          <div
+            className="tool-carousel"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Featured PDF tools"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onFocusCapture={() => setHasFocus(true)}
+            onBlurCapture={(event) => setHasFocus(event.currentTarget.contains(event.relatedTarget))}
+          >
+            <div className="hero-tools" ref={carouselRef}>
+              <div className="tool-slide-track">
+                <ToolSlides />
+              </div>
+            </div>
+            <div className="tool-carousel-controls">
+              <button type="button" aria-label="Previous featured tools" onClick={() => scrollTools(-1)}>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15 10H5m4 5-5-5 5-5" /></svg>
+              </button>
+              {!prefersReducedMotion && (
+                <button
+                  type="button"
+                  aria-label={isManuallyPaused ? "Resume featured tools" : "Pause featured tools"}
+                  onClick={() => setIsManuallyPaused((paused) => !paused)}
+                >
+                  {isManuallyPaused ? "Play" : "Pause"}
+                </button>
+              )}
+              <button type="button" aria-label="Next featured tools" onClick={() => scrollTools(1)}>
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m-4-5 5 5-5 5" /></svg>
+              </button>
             </div>
           </div>
         </section>

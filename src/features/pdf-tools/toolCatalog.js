@@ -50,7 +50,7 @@ export const toolGroups = [
     title: "Convert files",
     description: "Convert PDFs to and from everyday file formats.",
     icon: "convert",
-    tools: ["PDF to Word", "PDF to Excel", "PDF to PowerPoint", "PDF to JPG or images", "Extract images from PDF", "Word to PDF", "Excel to PDF", "Images to PDF"],
+    tools: ["PDF to Word", "Word to PDF", "PDF to Excel", "Excel to PDF", "PDF to PowerPoint", "Images to PDF", "PDF to JPG or images", "Extract images from PDF"],
   },
   {
     title: "Compress & secure",
