@@ -34,6 +34,13 @@ export default function SiteHeader({ activePage = "home" }) {
       icon: <><path d="M4 2.25h5.4L12 4.85v8.9H4z" /><path d="M9.25 2.25V5h2.7M6 8h4M6 10.5h4" /></>,
     },
     {
+      id: "editor",
+      label: "Edit PDF",
+      href: "/tools/edit-pdf",
+      current: activePage === "tool",
+      icon: <><path d="M3 2.5h6l4 4v7H3z" /><path d="M9 2.5v4h4M5.5 9h4M5.5 11h3" /></>,
+    },
+    {
       id: "theme",
       label: theme === "dark" ? "Light" : "Dark",
       ariaLabel: `Switch to ${theme === "dark" ? "light" : "dark"} mode`,
@@ -42,13 +49,6 @@ export default function SiteHeader({ activePage = "home" }) {
       icon: theme === "dark"
         ? <path d="M12.7 9.7A5.5 5.5 0 0 1 6.3 3.3 5.8 5.8 0 1 0 12.7 9.7Z" />
         : <><circle cx="8" cy="8" r="3" /><path d="M8 1.5v1.4M8 13.1v1.4M14.5 8h-1.4M2.9 8H1.5m11.1-4.6-1 1M4.4 11.6l-1 1m9.2 0-1-1m-7.2-7.2-1-1" /></>,
-    },
-    {
-      id: "editor",
-      label: "Edit PDF",
-      href: "/tools/edit-pdf",
-      current: activePage === "tool",
-      icon: <><path d="M3 2.5h6l4 4v7H3z" /><path d="M9 2.5v4h4M5.5 9h4M5.5 11h3" /></>,
     },
   ];
 
