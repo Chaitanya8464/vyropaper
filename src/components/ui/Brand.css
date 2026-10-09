@@ -1,0 +1,53 @@
+/* Paperwork wordmark */
+
+.brand {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+
+    color: var(--text-primary, #292a26);
+    text-decoration: none;
+
+    font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+    font-size: 21px;
+    font-weight: 400;
+    letter-spacing: 0.19em;
+    line-height: 1;
+
+    white-space: nowrap;
+    transition: opacity 180ms ease;
+}
+
+.brand:hover {
+    opacity: 0.78;
+}
+
+.brand-wordmark {
+    display: inline-block;
+    padding-right: 0.19em;
+}
+
+/* Ivory wordmark for dark backgrounds */
+
+.brand.brand-light {
+    color: #f5f0e6;
+}
+
+/* Mobile responsiveness */
+
+@media (max-width: 480px) {
+    .brand {
+        font-size: 16px;
+        letter-spacing: 0.12em;
+    }
+
+    .brand-wordmark {
+        padding-right: 0.12em;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .brand {
+        transition: none;
+    }
+}
