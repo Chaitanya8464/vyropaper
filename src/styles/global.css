@@ -1698,37 +1698,72 @@ a:hover .arrow-icon {
   height: 82px;
   border-bottom: 0;
   background: transparent;
+  position: relative;
 }
 
-.site-header .brand,
-.site-header .main-nav a,
-.site-header .header-link,
-.site-header .theme-toggle {
+.site-header.hero-header {
+  background: linear-gradient(135deg, #1c2923, #101714 74%);
+}
+
+.site-header.hero-header .brand,
+.site-header.hero-header .main-nav a,
+.site-header.hero-header .header-link,
+.site-header.hero-header .theme-toggle {
   color: #f7f7f2;
 }
 
-.site-header .brand-mark svg {
+.site-header.hero-header .brand-mark svg {
   stroke: #d6e5d0;
 }
 
-.site-header .theme-toggle {
+.site-header.hero-header .theme-toggle {
   border-color: rgba(255, 255, 255, 0.24);
 }
 
-.site-header .theme-toggle:hover {
+.site-header.hero-header .theme-toggle:hover {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.site-header .header-link {
+.site-header.hero-header .header-link {
   min-height: 42px;
   padding: 0 16px;
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
-.site-header .main-nav a:hover,
-.site-header .header-link:hover {
+.site-header.hero-header .main-nav a:hover,
+.site-header.hero-header .header-link:hover {
   color: #d6e5d0;
 }
+
+/* Light mode - scrolled state */
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .brand,
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .main-nav a,
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .header-link,
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .theme-toggle {
+  color: #20231f;
+}
+
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .brand-mark svg {
+  stroke: #4d674f;
+}
+
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .theme-toggle {
+  border-color: #e5e3dc;
+}
+
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .header-link {
+  border-color: #e5e3dc;
+}
+
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .theme-toggle:hover {
+  background: #e9eee7;
+}
+
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .main-nav a:hover,
+:root:not([data-theme="dark"]) .site-header:not(.hero-header) .header-link:hover {
+  color: #4d674f;
+}
+
 
 .hero {
   width: 100%;
