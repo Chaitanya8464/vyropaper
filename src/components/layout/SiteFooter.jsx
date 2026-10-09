@@ -22,7 +22,7 @@ export default function SiteFooter() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 Paperwork</span>
+          <span text-size="10px">© 2026 Paperwork, A product of the <a href="https://www.vayro.global/" target="_blank" rel="noopener noreferrer">Vayro Global</a></span>
           <span>Made for documents, not distractions.</span>
         </div>
       </div>
