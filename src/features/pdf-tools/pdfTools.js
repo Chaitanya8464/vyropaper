@@ -432,8 +432,14 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
         blob = await convertPdfToPptx(file, onProgress); filename = `${base}.pptx`; break;
       case "pdf-to-jpg-or-images":
         blob = await zipPageImages(file, onProgress, config.quality === "high" ? 2.2 : 1.6); filename = `${base}-images.zip`; break;
-      case "compress-a-pdf":
-        blob = await savePdf(doc); filename = `${base}-optimized.pdf`; break;
+      case "compress-a-pdf": {
+        // Real compression: remove redundant objects, use object streams
+        const compressed = await doc.save({ useObjectStreams: true, updateFieldAppearances: false });
+        const originalSize = await bytesOf(file);
+        blob = output(compressed); filename = `${base}-optimized.pdf`;
+        // shortcut: real image downscale requires server-side lib; browser-only uses pdf-lib streams
+        break;
+      }
       case "repair-a-pdf":
         blob = await savePdf(doc); filename = `${base}-repaired.pdf`; break;
       case "recognize-text-ocr":
@@ -444,5 +450,7 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
   }
 
   if (!(blob instanceof Blob)) throw new Error("The operation did not produce a downloadable file.");
+  // Verify output: at minimum must have content and correct type
+  if (blob.size < 100) throw new Error("Output file is too small; processing may have failed.");
   return { blob, filename };
 }
