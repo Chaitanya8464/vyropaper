@@ -1572,6 +1572,14 @@ a:hover .arrow-icon {
   stroke: #a3b69d;
 }
 
+:root[data-theme="dark"] .brand {
+  color: #e9e9e3;
+}
+
+:root[data-theme="dark"] .site-header:not(.hero-header) .brand {
+  color: #e9e9e3;
+}
+
 :root[data-theme="dark"] .eyebrow,
 :root[data-theme="dark"] .hero-description,
 :root[data-theme="dark"] .text-link,
