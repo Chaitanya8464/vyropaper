@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Brand from "../ui/Brand.jsx";
 import { useTheme } from "../../app/ThemeContext.jsx";
 import { AnimatedTopDock } from "../../shaders/animated-top-dock/AnimatedTopDock.tsx";
@@ -6,6 +6,16 @@ import { AnimatedTopDock } from "../../shaders/animated-top-dock/AnimatedTopDock
 export default function SiteHeader({ activePage = "home" }) {
   const { theme, setTheme } = useTheme();
   const isHome = activePage === "home";
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isHome) return;
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 100);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isHome]);
   const menuItems = [
     {
       id: "tools",
@@ -53,7 +63,7 @@ export default function SiteHeader({ activePage = "home" }) {
   ];
 
   return (
-    <header className="site-header">
+    <header className={`site-header${isHome && !scrolled ? " hero-header" : ""}`}>
       <div className="header-inner">
         <Brand />
         <AnimatedTopDock
