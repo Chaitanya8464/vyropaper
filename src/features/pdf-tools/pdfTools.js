@@ -457,11 +457,17 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
         if (!result.success || !result.data) {
           throw new Error(result.error || "Server returned no data");
         }
+        // Defensive base64 decode with padding fix
+        const raw = (result.data || '').toString();
+        if (!raw || raw.length < 10 || raw.includes('{') || raw.includes('error')) {
+          throw new Error('Server did not return valid compressed PDF data');
+        }
+        const padded = raw + '='.repeat((4 - (raw.length % 4)) % 4);
         let compressedBuffer;
         try {
-          compressedBuffer = Uint8Array.from(atob(result.data), c => c.charCodeAt(0));
+          compressedBuffer = Uint8Array.from(atob(padded), c => c.charCodeAt(0));
         } catch {
-          const binary = atob(result.data);
+          const binary = atob(padded);
           compressedBuffer = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) compressedBuffer[i] = binary.charCodeAt(i);
         }
