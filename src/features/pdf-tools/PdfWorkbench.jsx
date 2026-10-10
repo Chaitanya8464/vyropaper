@@ -40,7 +40,7 @@ const TOOL_HELP = {
   "word-to-pdf": "Convert the readable text in a DOCX file. Original styling and images may not be preserved.",
   "excel-to-pdf": "Convert spreadsheet cell values to a readable PDF.",
   "images-to-pdf": "Create one PDF page per selected PNG or JPG image.",
-  "compress-a-pdf": "Rewrite the PDF in the browser with compact object streams. Existing image data is not recompressed.",
+  "compress-a-pdf": "Reduce file size by optimizing PDF structure and removing metadata. Choose a compression level: Low keeps metadata, Medium removes it (best balance), High is most aggressive.",
   "repair-a-pdf": "Try to parse and rewrite a readable PDF. Severely damaged or unsupported PDFs cannot be repaired.",
   "recognize-text-ocr": "Run English OCR in this browser and download recognized text as a TXT file.",
   "flatten-a-pdf": "Flatten interactive form fields into page content.",

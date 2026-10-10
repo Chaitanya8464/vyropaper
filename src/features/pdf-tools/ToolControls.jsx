@@ -53,6 +53,16 @@ export default function ToolControls({ toolId, config, setConfig, imageFile, set
       return <>{pages("All pages")}<NumberControl label="Inset from each edge (pt)" value={config.inset ?? 36} min={1} onChange={update("inset")} /></>;
     case "pdf-to-jpg-or-images":
       return <Field label="Image quality"><select value={config.quality || "standard"} onChange={(event) => update("quality")(event.target.value)}><option value="standard">Standard</option><option value="high">High</option></select></Field>;
+    case "compress-a-pdf":
+      return (
+        <Field label="Compression level" hint="Higher compression removes more metadata but may affect form fields.">
+          <select value={config.compression || "medium"} onChange={(event) => update("compression")(event.target.value)}>
+            <option value="low">Low — Basic optimization, keeps metadata</option>
+            <option value="medium">Medium — Removes metadata, good results</option>
+            <option value="high">High — Aggressive, strips everything</option>
+          </select>
+        </Field>
+      );
     case "images-to-pdf":
       return <Field label="Page sizing"><select value={config.pageSize || "image"} onChange={(event) => update("pageSize")(event.target.value)}><option value="image">Fit each page to its image</option></select></Field>;
     default:

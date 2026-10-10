@@ -14,6 +14,11 @@ export const LIMITATIONS = {
 };
 
 const safeName = (name) => (name || "document").replace(/\.[^.]+$/, "") || "document";
+const formatBytes = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 const bytesOf = async (file) => new Uint8Array(await file.arrayBuffer());
 const pdfFrom = async (file) => PDFDocument.load(await bytesOf(file), { ignoreEncryption: false });
 const output = (bytes, type = "application/pdf") => new Blob([bytes], { type });
@@ -433,11 +438,25 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
       case "pdf-to-jpg-or-images":
         blob = await zipPageImages(file, onProgress, config.quality === "high" ? 2.2 : 1.6); filename = `${base}-images.zip`; break;
       case "compress-a-pdf": {
-        // Real compression: remove redundant objects, use object streams
-        const compressed = await doc.save({ useObjectStreams: true, updateFieldAppearances: false });
-        const originalSize = await bytesOf(file);
-        blob = output(compressed); filename = `${base}-optimized.pdf`;
-        // shortcut: real image downscale requires server-side lib; browser-only uses pdf-lib streams
+        // Server-side compression with image downscaling
+        const level = config.compression || "medium";
+        const fileBytes = await bytesOf(file);
+
+        const response = await fetch(`/api/compress-pdf?level=${level}`, {
+          method: "POST",
+          body: fileBytes,
+          headers: { "Content-Type": "application/octet-stream" },
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Server compression failed");
+        }
+
+        const result = await response.json();
+        const compressedBuffer = Buffer.from(result.data, "base64");
+        blob = output(compressedBuffer);
+        filename = `${base}-compressed.pdf`;
         break;
       }
       case "repair-a-pdf":
