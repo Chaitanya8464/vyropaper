@@ -8,12 +8,19 @@ export default function SiteFooter() {
         <div className="footer-main">
           <div className="footer-brand-block">
             <Brand light />
+
             <p className="footer-tagline">
-              PDF tools for the work <br />you actually need to do.
+              PDF tools for the work <br />
+              you actually need to do.
             </p>
+
             <div className="footer-attribution">
               <span>A product of </span>
-              <a href="https://Vayro.global" rel="noopener noreferrer">
+              <a
+                href="https://www.vayro.global/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Vayro Global
               </a>
             </div>
@@ -34,19 +41,28 @@ export default function SiteFooter() {
         </div>
 
         <div className="footer-bottom">
-<<<<<<< ours
-          <span text-size="10px">© 2026 Paperwork, A product of the <a href="https://www.vayro.global/" target="_blank" rel="noopener noreferrer">Vayro Global</a></span>
-          <span>Made for documents, not distractions.</span>
-=======
           <div className="footer-copyright">
             <span>© 2026 Paperwork</span>
-            <span className="footer-separator" aria-hidden="true">·</span>
-            <a href="https://Vayro.global">A product of Vayro Global</a>
+
+            <span
+              className="footer-separator"
+              aria-hidden="true"
+            >
+              ·
+            </span>
+
+            <a
+              href="https://www.vayro.global/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              A product of Vayro Global
+            </a>
           </div>
+
           <div className="footer-tagline-bottom">
             Made for documents, not distractions.
           </div>
->>>>>>> theirs
         </div>
       </div>
     </footer>
