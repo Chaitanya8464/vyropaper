@@ -454,7 +454,7 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
         }
 
         const result = await response.json();
-        const compressedBuffer = Buffer.from(result.data, "base64");
+        const compressedBuffer = Uint8Array.from(atob(result.data), c => c.charCodeAt(0));
         blob = output(compressedBuffer);
         filename = `${base}-compressed.pdf`;
         break;
@@ -473,3 +473,5 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
   if (blob.size < 100) throw new Error("Output file is too small; processing may have failed.");
   return { blob, filename };
 }
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
