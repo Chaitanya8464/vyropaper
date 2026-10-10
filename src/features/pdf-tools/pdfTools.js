@@ -454,7 +454,17 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
         }
 
         const result = await response.json();
-        const compressedBuffer = Uint8Array.from(atob(result.data), c => c.charCodeAt(0));
+        if (!result.success || !result.data) {
+          throw new Error(result.error || "Server returned no data");
+        }
+        let compressedBuffer;
+        try {
+          compressedBuffer = Uint8Array.from(atob(result.data), c => c.charCodeAt(0));
+        } catch {
+          const binary = atob(result.data);
+          compressedBuffer = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) compressedBuffer[i] = binary.charCodeAt(i);
+        }
         blob = output(compressedBuffer);
         filename = `${base}-compressed.pdf`;
         break;
