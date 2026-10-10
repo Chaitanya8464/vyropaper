@@ -473,5 +473,3 @@ export async function runPdfTool({ toolId, files = [], imageFile, config = {}, o
   if (blob.size < 100) throw new Error("Output file is too small; processing may have failed.");
   return { blob, filename };
 }
-Co-Authored-By: Claude Code <noreply@anthropic.com>
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
